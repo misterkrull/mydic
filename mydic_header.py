@@ -1,6 +1,5 @@
-# подключаем библиотеки для работы с базой данных и с рандомом
-import sqlite3 
-import random
+# подключаем библиотеку для работы с базой данных
+import sqlite3
 
 # создаём класс для работы с базой данных
 class DB:                        
@@ -23,11 +22,11 @@ class DB:
    
     # просмотр всех записей
     def view(self):        
-        # выбираем все записи о покупках
+        # выбираем все записи
         self.cur.execute("SELECT * FROM words") 
         # собираем все найденные записи в колонку со строками
         rows = self.cur.fetchall()  
-        # возвращаем сроки с записями расходов
+        # возвращаем строки с записями
         return rows
 
     # добавляем новую запись
@@ -37,11 +36,10 @@ class DB:
         # сохраняем изменения
         self.conn.commit()
         
-
-    # # обновляем информацию о покупке
-    # def update(self, id, product, price):   
+    # # обновляем информацию
+    # def update(self, id, word_en, word_ru, rating):   
     #     # формируем запрос на обновление записи в БД
-    #     self.cur.execute("UPDATE buy SET product=?, price=? WHERE id=?", (product, price, id,))
+    #     self.cur.execute("UPDATE words SET word_en=?, word_ru=?, rating=? WHERE id=?", (word_en, word_ru, rating, id,))
     #     # сохраняем изменения 
     #     self.conn.commit()
 
@@ -52,10 +50,10 @@ class DB:
         # сохраняем изменения
         self.conn.commit()
 
-    # # ищем запись по названию покупки
-    # def search(self, product="", price=""):  
+    # # ищем запись по word_en
+    # def search(self, word_en=""):  
     #     # формируем запрос на поиск по точному совпадению
-    #     self.cur.execute("SELECT * FROM buy WHERE product=?", (product,))
+    #     self.cur.execute("SELECT * FROM words WHERE word_en=?", (word_en,))
     #     # формируем полученные строки и возвращаем их как ответ
     #     rows = self.cur.fetchall()
     #     return rows
