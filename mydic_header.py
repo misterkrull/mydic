@@ -25,7 +25,7 @@ class DB:
         # выбираем все записи
         self.cur.execute("SELECT * FROM words") 
         # собираем все найденные записи в колонку со строками
-        rows = self.cur.fetchall()  
+        rows = self.cur.fetchall()
         # возвращаем строки с записями
         return rows
 
