@@ -1,57 +1,148 @@
-from mydic_header import DB
+from db import DB
 import random
+import argparse
 
-db = DB()
 
-MAX_RATING = 8
+def main():
 
-number_of_words = db.count()
-copy_db = db.view()
+    MAX_RATING = 8
 
-max_rand = number_of_words * MAX_RATING
+    db = DB()
+    number_of_words = db.count()
+    copy_db = db.view()
 
-while True:
+    parser = argparse.ArgumentParser(
+            description=(
+                    "Программа mydic\n"
+                    "Автор - Ярослав Круль, 2024\n"
+                    "\n"
+                    "Данная программа представляет собой словарь, содержащий английские и русские слова,\n"
+                    f"а также их рейтинг от 0 до {MAX_RATING}.\n"
+                    "\n"
+                    "Программа выдаёт случайное английское слово и предлагает пользователю вспомнить его перевод.\n"
+                    "Если нажать клавишу Enter, то программа покажет перевод этого слова,\n"
+                    "а также отобразит текущий рейтинг словарной пары и предложит его обновить.\n"
+                    "Можно указать новый рейтинг и нажать Enter или ничего не вводить и нажать Enter\n"
+                    "(в последнем случае рейтинг останется прежним).\n"
+                    "После этого программа покажет новое случайное английское слово - и всё повторится сначала.\n"
+                    "Чтобы выйти из программы, нужно в строке с английским словом набрать символ 'q' или 'й'\n"
+                    "и нажать Enter.\n"
+                    "\n"
+                    f"Рейтинг влияет на частоту отображения слова: если рейтинг равен {MAX_RATING}, то вероятность выпадения\n"
+                    "данного слова наивысшая, а при рейтинге 0 слово не выпадает никогда."),
+            formatter_class=argparse.RawTextHelpFormatter) # без этого поля будут игнорироваться символы \n
+    
+    subparsers = parser.add_subparsers(dest='command')
 
-    # алгоритм выбора случайного слова с соответствующим рейтингу весом (плотностью вероятности)
-    # алгоритм работает так: 
-    #   нарисуем таблицу с MAX_RATING строками и number_of_words столбцами:
-    # 
-    #       0 0 0 0 0 x x 0 x 0 0 0 0 ...  MAX_RATING-1 строка
-    #       0 0 x 0 0 x x x x 0 x 0 0 ...  ...
-    #       x 0 x 0 0 x x x x x x 0 0 ...  2 строка
-    #       x x x 0 0 x x x x x x 0 x ...  1 строка
-    #       x x x x 0 x x x x x x 0 x ...  0 строка
-    # 
-    #       3 2 4 1 0 5 5 4 5 3 4 0 2 ...  вес каждого слова (от 0 до MAX_RATING включительно)
-    #   
-    #   Для реализации случайного выбора слова с заданным весом нужно реализовать равновероятный
-    #       выбор из всех отмеченных в таблице x-ов. Можно решить задачу точно, но можно пойти проще:
-    #       1. Берём случайную клетку из той таблице и смотрим, чё там
-    #       2. Если там 0, то возвращаемся к пункту 1,
-    #          а если там x, то выдаём соответствующее слово
-    while True:     
-        random_number = random.randrange(0, max_rand)	# нумерация ячеек таблицы от 0 до max_rand-1
-        index = random_number % number_of_words			# номер столбца (слова) от 0 до number_of_words-1
-		# далее сравниваем рейтинг слова (от 0 до MAX_RATING) с номером текущей строки (от 0 до MAX_RATING-1):
-        if copy_db[index][3] > random_number // number_of_words:	
-            break
-            # условие проходит и цикл останавливается (мы победили и нашли слово), если первое больше второго :)
-            # в частности, если рейтинг слова ноль, то всегда будет перезапуск
-            # а если рейтинг равен MAX_RATING, то всегда будет "мы победили"
-            # что и требуется
+    parser_add = subparsers.add_parser(
+                'add', 
+                help=("Добавить новое слово в словарь\n"
+                      "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг"))
+    parser_add.add_argument('word_en', type=str)
+    parser_add.add_argument('word_ru', type=str)
+    parser_add.add_argument('rating', type=int)
+    
+    parser_del = subparsers.add_parser(
+                'del', help=("Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
+                             "    Формат: mydic del (id | английское_слово)"))
+    parser_del.add_argument('id_or_word_en')
+    
+    args = parser.parse_args()
 
-    print("Английский       : " + str(copy_db[index][1]), end=" ")
+    if args.command == 'add':
+        word_en, word_ru, rating = args.word_en, args.word_ru, args.rating
+        db.insert(word_en, word_ru, rating)
+        print(f'Словарная пара "{word_en}" - "{word_ru}" со стартовым рейтингом {rating} \
+успешно добавлена!')
+            
+    elif args.command == 'del':
+        try:
+            id_or_word_en = int(args.id_or_word_en)
+            choice = "id"
+            found_entries = db.search_by_id(id_or_word_en)
+        except ValueError:
+            id_or_word_en = args.id_or_word_en
+            choice = "word_en"
+            found_entries = db.search_by_word_en(id_or_word_en)
+        
+        if not found_entries:
+            print(f"Не найдено ни одной записи с {choice}={id_or_word_en}")
+        else:
+            print(f"Найдены следующие записи с {choice}={id_or_word_en}:")
+            for entry in found_entries:
+                print(f"id={entry[0]}   {entry[1]}   {entry[2]}   rating={entry[3]}")
+            ans = input("Удалить? (Y/y/Д/д - да, любые другие символы - нет) ")
+            if ans in {'Y', 'y', 'Д', 'д'}:
+                if choice == "id":
+                    db.delete_by_id(id_or_word_en)
+                else:
+                    db.delete_by_word_en(id_or_word_en)
+                print("Удалено!")
 
-    quit_symbol = input()
-    if quit_symbol == 'q' or quit_symbol == 'й' :
-        break
+    else:    
+        max_rand = number_of_words * MAX_RATING
+        while True:
 
-    print("Русский          : " + str(copy_db[index][2]))
-    print("Текущий рейтинг  : " + str(copy_db[index][3]))
+            # алгоритм выбора случайного слова с соответствующим рейтингу весом (плотностью вероятности)
+            # алгоритм весьма забавный, постараюсь сейчас объяснить его работу
+            # 
+            # для иллюстрации алгоритма нарисуем таблицу с MAX_RATING строками и number_of_words столбцами
+            #   (в данном примере MAX_RATING=5, это не суть важно)
+            # тогда всего в таблице max_rand ячеек (max_rand = number_of_words * MAX_RATING)
+            # каждый столбец соответствует какому-то слову
+            # в каждой ячейке один из двух символов: 0 или x
+            # количество x в столбце равно рейтингу данного слова
+            # все x-ы прижаты к верхнему краю
+            #
+            #       x x x x 0 x x x x x x 0 x ...   0 строка
+            #       x x x 0 0 x x x x x x 0 x ...   1 строка
+            #       x 0 x 0 0 x x x x x x 0 0 ...   2 строка
+            #       0 0 x 0 0 x x x x 0 x 0 0 ...   3 строка
+            #       0 0 0 0 0 x x 0 x 0 0 0 0 ...   MAX_RATING-1=4 строка
+            # 
+            #       3 2 4 1 0 5 5 4 5 3 4 0 2 ...   рейтинг каждого слова (от 0 до MAX_RATING включительно)
+            #   
+            #   Для реализации случайного выбора слова с заданным весом нужно реализовать равновероятный
+            #       выбор из всех отмеченных в таблице x-ов. Можно решить задачу точно, но можно пойти проще:
+            #       1. Берём случайную клетку из той таблицы и смотрим, чё там
+            #       2. Если там 0, то возвращаемся к пункту 1,
+            #          а если там x, то выдаём соответствующее слово
+            #
+            #   Нумерацию ячеек в таблице выберем следующим образом:
+            #       от 0                до   number_of_words-1          0 строка
+            #       от number_of_words  до 2*number_of_words-1          1 строка
+            #            и т.д.
+            while True:     
+                random_number = random.randrange(0, max_rand)	# выбираем случайную ячейку таблицы
+                index = random_number % number_of_words			# вычисляем номер столбца (слова) от 0 до number_of_words-1
+                # далее сравниваем рейтинг слова (от 0 до MAX_RATING) 
+                #                        с номером строки текущей ячейки (от 0 до MAX_RATING-1)
+                # тем самым мы определяем, стоит ли в ячейке 0 или x
+                if copy_db[index][3] > random_number // number_of_words:	
+                    # если условие выполняется, то значит в текущей ячейке стоит x
+                    # а это значит - мы победили и нашли слово
+                    break
+                    # (в частности, если рейтинг слова ноль, то всегда будет перезапуск
+                    #  а если рейтинг равен MAX_RATING, то всегда будет "мы победили"
+                    #  что и требуется)
+                # а если условие не проходит, то в ячейке 0 и мы "перебрасываем кости" 
 
-    a = input("Новый рейтинг    : ")
-    if a != "":
-        db.refresh_rating(copy_db[index][0], int(a))
-        copy_db[index] = (copy_db[index][0], copy_db[index][1], copy_db[index][2], int(a))
+            print("Английский       : " + str(copy_db[index][1]), end=" ")
 
-    print()
+            quit_symbol = input()
+            if quit_symbol == 'q' or quit_symbol == 'й' :
+                break
+
+            print("Русский          : " + str(copy_db[index][2]))
+            print("Текущий рейтинг  : " + str(copy_db[index][3]))
+
+            a = input("Новый рейтинг    : ")
+            if a != "":
+                db.refresh_rating(copy_db[index][0], int(a))
+                copy_db[index] = (copy_db[index][0], copy_db[index][1], copy_db[index][2], int(a))
+
+            print()
+
+
+if __name__ == "__main__":
+    main()

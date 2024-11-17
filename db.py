@@ -1,12 +1,15 @@
 # подключаем библиотеку для работы с базой данных
 import sqlite3
+import os
+
+MY_PATH = "G:\\codes\\vscode\\mydic"
 
 # создаём класс для работы с базой данных
 class DB:                        
     # конструктор класса
     def __init__(self):           
         # соединяемся с файлом базы данных
-        self.conn = sqlite3.connect("mydic.db")  
+        self.conn = sqlite3.connect(os.path.join(MY_PATH, "mydic.db")) 
         # создаём курсор для виртуального управления базой данных
         self.cur = self.conn.cursor()    
         # если нужной нам таблицы в базе нет — создаём её
@@ -43,20 +46,35 @@ class DB:
     #     # сохраняем изменения 
     #     self.conn.commit()
 
-    # удаляем запись
-    def delete(self, id):                   
+    # удаляем запись по id
+    def delete_by_id(self, id):                   
         # формируем запрос на удаление выделенной записи по внутреннему порядковому номеру
         self.cur.execute("DELETE FROM words WHERE id=?", (id,))
         # сохраняем изменения
         self.conn.commit()
 
-    # # ищем запись по word_en
-    # def search(self, word_en=""):  
-    #     # формируем запрос на поиск по точному совпадению
-    #     self.cur.execute("SELECT * FROM words WHERE word_en=?", (word_en,))
-    #     # формируем полученные строки и возвращаем их как ответ
-    #     rows = self.cur.fetchall()
-    #     return rows
+    # удаляем запись по word_en
+    def delete_by_word_en(self, word_en):                   
+        # формируем запрос на удаление выделенной записи по внутреннему порядковому номеру
+        self.cur.execute("DELETE FROM words WHERE word_en=?", (word_en,))
+        # сохраняем изменения
+        self.conn.commit()
+
+    # ищем запись по id
+    def search_by_id(self, id=0):  
+        # формируем запрос на поиск по точному совпадению
+        self.cur.execute("SELECT * FROM words WHERE id=?", (id,))
+        # формируем полученные строки и возвращаем их как ответ
+        rows = self.cur.fetchall()
+        return rows
+    
+    # ищем запись по word_en
+    def search_by_word_en(self, word_en=""):  
+        # формируем запрос на поиск по точному совпадению
+        self.cur.execute("SELECT * FROM words WHERE word_en=?", (word_en,))
+        # формируем полученные строки и возвращаем их как ответ
+        rows = self.cur.fetchall()
+        return rows
 
     def count(self):
         self.cur.execute('SELECT COUNT(*) FROM words')
