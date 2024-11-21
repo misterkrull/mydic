@@ -13,7 +13,7 @@ def main():
     MAX_WEIGHT = RATING_TO_WEIGHT[MAX_RATING]
 
     parser = argparse.ArgumentParser(
-            description=(
+            description=
                     "Программа mydic\n"
                     "Автор - Ярослав Круль, 2024\n"
                     "\n"
@@ -30,22 +30,22 @@ def main():
                     "и нажать Enter.\n"
                     "\n"
                     f"Рейтинг влияет на частоту отображения слова: если рейтинг равен {MAX_RATING}, то вероятность выпадения\n"
-                    "данного слова наивысшая, а при рейтинге 0 слово не выпадает никогда."),
+                    "данного слова наивысшая, а при рейтинге 0 слово не выпадает никогда.",
             formatter_class=argparse.RawTextHelpFormatter) # без этого поля будут игнорироваться символы \n
     
     subparsers = parser.add_subparsers(dest='command')
 
     parser_add = subparsers.add_parser(
                 'add', 
-                help=("Добавить новое слово в словарь\n"
-                      "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг"))
+                help="Добавить новое слово в словарь\n"
+                      "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг")
     parser_add.add_argument('word_en', type=str)
     parser_add.add_argument('word_ru', type=str)
     parser_add.add_argument('rating', type=int)
     
     parser_del = subparsers.add_parser(
-                'del', help=("Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
-                             "    Формат: mydic del (id | английское_слово)"))
+                'del', help="Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
+                             "    Формат: mydic del (id | английское_слово)")
     parser_del.add_argument('id_or_word_en')
     
     args = parser.parse_args()
