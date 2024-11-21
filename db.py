@@ -3,6 +3,7 @@ import sqlite3
 import os
 
 MY_PATH = "G:\\codes\\vscode\\mydic"
+MAX_RATING = 8
 
 # создаём класс для работы с базой данных
 class DB:                        
@@ -15,6 +16,15 @@ class DB:
         # если нужной нам таблицы в базе нет — создаём её
         self.cur.execute(             
             "CREATE TABLE IF NOT EXISTS words (id INTEGER PRIMARY KEY, word_en TEXT, word_ru TEXT, rating INTEGER)") 
+        
+        # делаем запрос на существование таблицы rating_to_weight
+        self.cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='rating_to_weight'")
+        # если таблицы rating_to_weight не существует, то создаём её, заполняя значениями по умолчанию
+        if not self.cur.fetchone():
+            self.cur.execute("CREATE TABLE rating_to_weight (rating INTEGER PRIMARY KEY, weight INTEGER)")
+            self.cur.executemany("INSERT INTO rating_to_weight (rating, weight) VALUES (?, ?)",
+                                 [(i, i) for i in range(MAX_RATING+1)])
+
         # сохраняем сделанные изменения в базе
         self.conn.commit()  
 
@@ -98,3 +108,11 @@ class DB:
     def refresh_rating(self, id, new_rat):
         self.cur.execute("UPDATE words SET rating=? WHERE id=?", (int(new_rat), id,))
         self.conn.commit()
+
+    def rating_to_weight(self) -> dict:
+        self.cur.execute("SELECT * FROM rating_to_weight") 
+        all_entries = self.cur.fetchall()
+        ans = {}
+        for entry in all_entries:
+            ans[int(entry[0])] = int(entry[1])
+        return ans
