@@ -13,7 +13,7 @@ def main():
     MAX_WEIGHT = RATING_TO_WEIGHT[MAX_RATING]
 
     parser = argparse.ArgumentParser(
-            description=(
+            description=
                     "Программа mydic\n"
                     "Автор - Ярослав Круль, 2024\n"
                     "\n"
@@ -30,31 +30,34 @@ def main():
                     "и нажать Enter.\n"
                     "\n"
                     f"Рейтинг влияет на частоту отображения слова: если рейтинг равен {MAX_RATING}, то вероятность выпадения\n"
-                    "данного слова наивысшая, а при рейтинге 0 слово не выпадает никогда."),
+                    "данного слова наивысшая, а при рейтинге 0 слово не выпадает никогда.",
             formatter_class=argparse.RawTextHelpFormatter) # без этого поля будут игнорироваться символы \n
     
     subparsers = parser.add_subparsers(dest='command')
 
     parser_add = subparsers.add_parser(
                 'add', 
-                help=("Добавить новое слово в словарь\n"
-                      "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг"))
+                help="Добавить новое слово в словарь\n"
+                      "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг")
     parser_add.add_argument('word_en', type=str)
     parser_add.add_argument('word_ru', type=str)
     parser_add.add_argument('rating', type=int)
     
     parser_del = subparsers.add_parser(
-                'del', help=("Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
-                             "    Формат: mydic del (id | английское_слово)"))
+                'del', help="Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
+                             "    Формат: mydic del (id | английское_слово)")
     parser_del.add_argument('id_or_word_en')
     
     args = parser.parse_args()
 
     if args.command == 'add':
         word_en, word_ru, rating = args.word_en, args.word_ru, args.rating
-        db.insert(word_en, word_ru, rating)
-        print(f'Словарная пара "{word_en}" - "{word_ru}" со стартовым рейтингом {rating} \
-успешно добавлена!')
+        if 0 <= rating <= MAX_RATING:
+            db.insert(word_en, word_ru, rating)
+            print(f'Словарная пара "{word_en}" - "{word_ru}" со стартовым рейтингом {rating} '
+                            'успешно добавлена!')
+        else:
+            print(f"Некорректные данные: рейтинг должен быть от 0 до {MAX_RATING}")
             
     elif args.command == 'del':
         try:
@@ -142,10 +145,19 @@ def main():
                 print("Русский          : " + str(copy_db[index][2]))
                 print("Текущий рейтинг  : " + str(copy_db[index][3]))
 
-                a = input("Новый рейтинг    : ")
-                if a != "":
-                    db.refresh_rating(copy_db[index][0], int(a))
-                    copy_db[index] = (copy_db[index][0], copy_db[index][1], copy_db[index][2], int(a))
+                while True:
+                    new_rating_str = input("Новый рейтинг    : ")
+                    if new_rating_str == "":
+                        break
+                    try:
+                        new_rating = int(new_rating_str)
+                        if 0 <= new_rating <= MAX_RATING:
+                            db.refresh_rating(copy_db[index][0], new_rating)
+                            copy_db[index] = (copy_db[index][0], copy_db[index][1], copy_db[index][2], new_rating)
+                            break
+                        print(f"Рейтинг должен быть числом от 0 до {MAX_RATING}! Попробуйте снова!")
+                    except ValueError:
+                        print("Рейтинг должен быть числом, а вы ввели не число! Попробуйте снова!")
 
                 print()
 

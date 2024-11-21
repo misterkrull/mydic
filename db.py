@@ -2,7 +2,7 @@
 import sqlite3
 import os
 
-MY_PATH = "G:\\codes\\vscode\\mydic"
+MY_PATH = os.path.dirname(os.path.abspath(__file__))
 MAX_RATING = 8
 
 # создаём класс для работы с базой данных
