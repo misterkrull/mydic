@@ -115,7 +115,7 @@ def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict
 
 
 # если пользователь введёт просто mydic (основной режим программы)
-def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, copy_db: list[Any]) -> None:
+def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, db: DB, copy_db: list[Any]) -> None:
     if number_of_words == 0:
         print("Ваш словарь пуст!\n"
               "Попробуйте заполнить его несколькими словами с помощью команды:\n"
@@ -182,7 +182,7 @@ def main():
     elif args.command == 'del':
         del_command(args, db)
     else:
-        learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, copy_db)
+        learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db)
 
 
 if __name__ == "__main__":
