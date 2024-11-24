@@ -98,9 +98,13 @@ def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict
     #       от 0                до   number_of_words-1          0 строка
     #       от number_of_words  до 2*number_of_words-1          1 строка
     #            и т.д.
+    # print(f"  max_rand = {max_rand:4}, number_of_words={number_of_words:2}")
     while True:     
         random_number = random.randrange(0, max_rand)  # выбираем случайную ячейку таблицы
         index = random_number % number_of_words  # вычисляем номер столбца от 0 до number_of_words-1
+        # print(f"    random_number={random_number:4}, index={index:2}\n"
+        #       f"      random_number // number_of_words={random_number // number_of_words:2}"
+        #       f" RATING_TO_WEIGHT[copy_db[{index:2}][3]]={RATING_TO_WEIGHT[copy_db[index][3]]:2}")
         # далее сравниваем вес слова (от 0 до MAX_WEIGHT) 
         #                        с номером строки текущей ячейки (от 0 до MAX_RATING-1)
         # тем самым мы определяем, стоит ли в ячейке 0 или x
@@ -123,18 +127,20 @@ def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, db: D
         return
     
     max_rand = number_of_words * MAX_WEIGHT
-    while True:
+    stat = [0] * number_of_words
+    for _ in range(3500000):
         index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db)
-        print("Английский       : " + str(copy_db[index][1]), end=" ")
+        stat[index] += 1
+        # print("Английский       : " + str(copy_db[index][1]), end=" ")
 
-        quit_symbol = input()
-        if quit_symbol in {'q', 'й'}:
-            break
+        # quit_symbol = input()
+        # if quit_symbol in {'q', 'й'}:
+        #     break
 
-        print("Русский          : " + str(copy_db[index][2]))
-        print("Текущий рейтинг  : " + str(copy_db[index][3]))
+        # print("Русский          : " + str(copy_db[index][2]))
+        # print("Текущий рейтинг  : " + str(copy_db[index][3]))
 
-        while True:
+        while False:
             new_rating_str = input("Новый рейтинг    : ")
             if new_rating_str == "":
                 break
@@ -148,7 +154,9 @@ def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, db: D
             except ValueError:
                 print("Рейтинг должен быть числом, а вы ввели не число! Попробуйте снова!")
 
-        print()
+        # print()
+    for i in range(number_of_words):
+        print(f"{i:2}  {stat[i]:3}")
 
 
 def main():
