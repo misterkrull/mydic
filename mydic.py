@@ -68,7 +68,13 @@ def del_command(args: argparse.Namespace, db: DB) -> None:
 
 
 # основной алгоритм программы
-def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict, copy_db: list[Any]) -> int:
+def choice_algorhytm(max_rand: int,
+                     number_of_words: int,
+                     RATING_TO_WEIGHT: dict,
+                     copy_db: list[Any],
+                     rating_from: int,
+                     rating_to: int
+                    ) -> int:
     # алгоритм выбора случайного слова с соответствующим рейтингу весом (плотностью вероятности)
     # алгоритм весьма забавный, постараюсь сейчас объяснить его работу
     # 
@@ -107,7 +113,10 @@ def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict
         if RATING_TO_WEIGHT[copy_db[index][3]] > random_number // number_of_words:	
             # если условие выполняется, то значит в текущей ячейке стоит x
             # а это значит - мы победили и нашли слово
-            return index
+            # остаётся проверить, что рейтинг найденного слова попадает в заданные границы
+            #   (да, не самый оптимальный алгоритм, но пока так)
+            if rating_from <= copy_db[index][3] <= rating_to:
+                return index
             # (в частности, если рейтинг слова ноль, то всегда будет перезапуск
             #  а если рейтинг равен MAX_RATING, то всегда будет "мы победили"
             #  что и требуется)
@@ -115,16 +124,34 @@ def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict
 
 
 # если пользователь введёт просто mydic (основной режим программы)
-def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, db: DB, copy_db: list[Any]) -> None:
+def learning(MAX_WEIGHT: int, 
+             number_of_words: int, 
+             RATING_TO_WEIGHT: int,
+             db: DB,
+             copy_db: list[Any],
+             rating_from: int,
+             rating_to: int
+            ) -> None:
+            
     if number_of_words == 0:
         print("Ваш словарь пуст!\n"
               "Попробуйте заполнить его несколькими словами с помощью команды:\n"
               "    mydic add английское_слово русское_слово стартовый_рейтинг")
         return
-    
+        
+    if not (0 <= rating_from <= MAX_RATING):
+        print(f"Ошибка: значение минимального рейтинга должно быть в диапазоне от 0 до {MAX_RATING}")
+        return
+    if not (0 <= rating_to <= MAX_RATING):
+        print(f"Ошибка: значение максимального рейтинга должно быть в диапазоне от 0 до {MAX_RATING}")
+        return
+    if not rating_from <= rating_to:
+        print("Ошибка: значение минимального рейтинга не должно превышать максимальное")
+        return
+
     max_rand = number_of_words * MAX_WEIGHT
     while True:
-        index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db)
+        index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db, rating_from, rating_to)
         print("Английский       : " + str(copy_db[index][1]), end=" ")
 
         quit_symbol = input()
@@ -164,6 +191,8 @@ def main():
         description=DESCRIPTION_HEAD.format(max_rating=MAX_RATING),
         formatter_class=argparse.RawTextHelpFormatter  # без этого поля будут игнорироваться символы \n
     )
+    parser.add_argument('--from', type=int, dest='rating_from', default=0, help='Минимальный рейтинг')
+    parser.add_argument('--to', type=int, dest='rating_to', default=MAX_RATING, help='Максимальный рейтинг')
     
     subparsers = parser.add_subparsers(dest='command')
 
@@ -182,7 +211,8 @@ def main():
     elif args.command == 'del':
         del_command(args, db)
     else:
-        learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db)
+        learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db,
+            args.rating_from, args.rating_to)
 
 
 if __name__ == "__main__":
