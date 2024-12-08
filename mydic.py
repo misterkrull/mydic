@@ -27,6 +27,8 @@ DESCRIPTION_HEAD = """\
 DESCRIPTION_ADD_COMMAND = ("Добавить новое слово в словарь\n"
                            "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг")
 
+DESCRIPTION_COUNT_COMMAND = ("Узнать текущее количество слов в словаре")
+
 DESCRIPTION_DEL_COMMAND = ("Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
                            "    Формат: mydic del (id | английское_слово)")
 
@@ -39,6 +41,10 @@ def add_command(args: argparse.Namespace, db: DB) -> None:
         print(f'Словарная пара "{word_en}" - "{word_ru}" со стартовым рейтингом {rating} успешно добавлена!')
     else:
         print(f"Некорректные данные: рейтинг должен быть от 0 до {MAX_RATING}")
+
+
+def count_command(copy_db: list[Any]) -> None:
+	print(f"Количество слов в базе: {len(copy_db)}")
 
 
 # если пользователь введёт: mydic del чтототам
@@ -200,7 +206,9 @@ def main():
     parser_add.add_argument('word_en', type=str)
     parser_add.add_argument('word_ru', type=str)
     parser_add.add_argument('rating', type=int)
-    
+
+    parser_count = subparsers.add_parser('count', help=DESCRIPTION_COUNT_COMMAND)
+
     parser_del = subparsers.add_parser('del', help=DESCRIPTION_DEL_COMMAND)
     parser_del.add_argument('id_or_word_en')
     
@@ -208,6 +216,8 @@ def main():
 
     if args.command == 'add':
         add_command(args, db)
+    elif args.command == 'count':
+        count_command(copy_db)
     elif args.command == 'del':
         del_command(args, db)
     else:
