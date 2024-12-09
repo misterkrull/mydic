@@ -136,7 +136,8 @@ def learning(MAX_WEIGHT: int,
              db: DB,
              copy_db: list[Any],
              rating_from: int,
-             rating_to: int
+             rating_to: int,
+             tw: bool
             ) -> None:
             
     if number_of_words == 0:
@@ -158,13 +159,21 @@ def learning(MAX_WEIGHT: int,
     max_rand = number_of_words * MAX_WEIGHT
     while True:
         index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db, rating_from, rating_to)
-        print("Английский       : " + str(copy_db[index][1]), end=" ")
+        eng_to_rus = bool(random.randrange(2)) if tw else True            
+        
+        if eng_to_rus:
+            print("Английский       : " + str(copy_db[index][1]), end=" ")
+        else:
+            print("Русский          : " + str(copy_db[index][2]), end=" ")
 
         quit_symbol = input()
         if quit_symbol in {'q', 'й'}:
             break
 
-        print("Русский          : " + str(copy_db[index][2]))
+        if eng_to_rus:
+            print("Русский          : " + str(copy_db[index][2]))  
+        else:
+            print("Английский       : " + str(copy_db[index][1]))
         print("Текущий рейтинг  : " + str(copy_db[index][3]))
 
         while True:
@@ -199,7 +208,8 @@ def main():
     )
     parser.add_argument('--from', type=int, dest='rating_from', default=0, help='Минимальный рейтинг')
     parser.add_argument('--to', type=int, dest='rating_to', default=MAX_RATING, help='Максимальный рейтинг')
-    
+    parser.add_argument('-tw', '--tw', '--two-way', action='store_true', help='Тренировка перевода в обе стороны')
+        
     subparsers = parser.add_subparsers(dest='command')
 
     parser_add = subparsers.add_parser('add', help=DESCRIPTION_ADD_COMMAND)
@@ -222,7 +232,7 @@ def main():
         del_command(args, db)
     else:
         learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db,
-            args.rating_from, args.rating_to)
+            args.rating_from, args.rating_to, args.tw)
 
 
 if __name__ == "__main__":
