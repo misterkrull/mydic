@@ -186,13 +186,13 @@ def learning(MAX_WEIGHT: int,
         print("Ошибка: значение минимального рейтинга не должно превышать максимальное")
         return    
     
-    count = 0
+    amount_of_words = 0
     for el in copy_db:
         if rating_from <= el[3] <= rating_to:
-            count += 1
-    if count > 0:
+            amount_of_words += 1
+    if amount_of_words > 0:
         print(f"Вы запустили режим тренировки{' в однократном режиме' if once else ''}!")
-        print("Количество слов в текущей тренировке: ", count)
+        print("Количество слов в текущей тренировке:", amount_of_words)
         print()
     else:
         print("Нет ни одного слова в указанном диапазоне рейтинга!")
@@ -200,22 +200,26 @@ def learning(MAX_WEIGHT: int,
     
     max_rand = number_of_words * MAX_WEIGHT
     single_pass_flags = [False] * len(copy_db)  # нужен для режима однократного прохождения
-    while count:  # если не включен однократный режим, то count не будет меняться и тут по факту бесконечный цикл
+    count = 0  # счётчик повторов, выведем в конце
+    while amount_of_words:  # если не включен однократный режим (и в нашей выборке есть слова)
+                            # то amount_of_words не будет меняться и тут по факту бесконечный цикл
         index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db,
                                  rating_from, rating_to, single_pass_flags)
         if once:
             single_pass_flags[index] = True
-            count -= 1
+            amount_of_words -= 1
         eng_to_rus = bool(random.randrange(2)) if tw else True            
         
         if eng_to_rus:
             print("Английский       : " + str(copy_db[index][1]), end=" ")
         else:
             print("Русский          : " + str(copy_db[index][2]), end=" ")
-
+        
         quit_symbol = input()
         if quit_symbol in {'q', 'й'}:
+            print("Количество повторённых слов:", count)
             break
+        count += 1
 
         if eng_to_rus:
             print("Русский          : " + str(copy_db[index][2]))  
@@ -237,8 +241,8 @@ def learning(MAX_WEIGHT: int,
             except ValueError:
                 print("Рейтинг должен быть числом, а вы ввели не число! Попробуйте снова!")
         
-        if once and count % 5 == 0:  # в однократном режиме каждые 5 слов пишем количество оставшихся
-            print("Осталось слов: ", count)
+        if once and amount_of_words % 5 == 0:  # в однократном режиме каждые 5 слов пишем количество оставшихся
+            print("Осталось слов: ", amount_of_words)
         print()
 
 
