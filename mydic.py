@@ -1,12 +1,16 @@
 import argparse
 import os
 import random
+import subprocess
 from db import DB, MAX_RATING
 from typing import Any
 
 
+CURRENT_FOLDER = os.path.dirname(os.path.abspath(__file__))
 DICTIONARIES_FOLDER = "dictionaries"
+DICTIONARIES_FOLDER_PATH = os.path.join(CURRENT_FOLDER, DICTIONARIES_FOLDER)
 CURRENT_DICTIONARY_FILE = os.path.join(DICTIONARIES_FOLDER, "_current_dictionary.txt")
+CURRENT_DICTIONARY_FILE_PATH = os.path.join(CURRENT_FOLDER, CURRENT_DICTIONARY_FILE)
 
 
 DESCRIPTION_HEAD = """\
@@ -37,6 +41,13 @@ DESCRIPTION_COUNT_COMMAND = ("Узнать текущее количество �
 DESCRIPTION_DEL_COMMAND = ("Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
                            "    Формат: mydic del (id | английское_слово)")
 
+DESCRIPTION_DICT_COMMAND = ("Сменить словарь\n"
+                            "    Формат: mydic dict имя_словаря\n"
+                            "    Также доступны следующие команды:\n"
+                            "        mydic dict current      Вывести название текущего словаря\n"
+                            "        mydic dict list         Вывести список имеющихся словарей\n"
+                            "        mydic dict open         Открыть папку со словарями в Проводнике")
+
 
 # если пользователь введёт: mydic add чтототам
 def add_command(args: argparse.Namespace, db: DB) -> None:
@@ -48,18 +59,20 @@ def add_command(args: argparse.Namespace, db: DB) -> None:
         print(f"Некорректные данные: рейтинг должен быть от 0 до {MAX_RATING}")
 
 
-def count_command(copy_db: list[Any], MAX_RATING: int, RATING_TO_WEIGHT: dict) -> None:
+def count_command(copy_db: list[Any], MAX_RATING: int, RATING_TO_WEIGHT: dict, current_dictionary: str) -> None:
     rating_counts = [0] * (MAX_RATING + 1)
     try:
         for el in copy_db:
             rating_counts[el[3]] += 1
     except:
         print("Невозможно подсчитать количество слов по каждому рейтингу"
-              "Судя по всему, в базе данных некорректные значения рейтинга")
-    print("Количество слов в базе:", len(copy_db))
+              "Судя по всему, в базе данных словаря некорректные значения рейтинга")
+        
+    print(f"Имя текущего словаря:        {current_dictionary}")
+    print(f"Количество слов в словаре:   {len(copy_db)}")
     
     total_weight = sum(rating_counts[i] * RATING_TO_WEIGHT[i] for i in range(MAX_RATING + 1))
-    print("Суммарный вес всех слов:", total_weight)
+    print(f"Суммарный вес всех слов:     {total_weight}")
     print()
     print(" Рейтинг    Вес одного     Количество      Шанс выпадения     Шанс выпадения слова")
     print("               слова          слов          одного слова       с данным рейтингом")
@@ -103,6 +116,38 @@ def del_command(args: argparse.Namespace, db: DB) -> None:
         else:
             db.delete_by_word_en(id_or_word_en)
         print("Удалено!")
+
+
+def dict_command(args: argparse.Namespace, db: DB, current_dictionary: str) -> None:
+
+    if args.dictionary_name == "list":
+        files = os.listdir(DICTIONARIES_FOLDER_PATH)
+        db_files = [os.path.splitext(f)[0] for f in files if f.endswith('.db')]
+
+        print("Список имеющихся словарей:")
+        print(*db_files, sep='\n')
+        return
+    
+    if args.dictionary_name == "open":
+        try:
+            # Открываем Проводник Windows с указанным путем
+            subprocess.Popen(['explorer', DICTIONARIES_FOLDER_PATH])
+            print(f"Папка со словарями открылась в Проводнике")
+        except Exception as e:
+            print(f"Ошибка при открытии Проводника: {e}")
+        return
+    
+    if args.dictionary_name == "current":
+        print(f"Текущий словарь: {current_dictionary}")
+        return
+    
+    try:
+        with open(CURRENT_DICTIONARY_FILE_PATH, 'w') as cur_dict_file:
+            cur_dict_file.write(args.dictionary_name)
+        print("Словарь успешно сменён!")
+        print(f"Текущий словарь: {args.dictionary_name}")
+    except OSError as e:
+        print(f"Ошибка при открытии файла, хранящего имя текущего словаря: {e}")
 
 
 # основной алгоритм программы
@@ -251,13 +296,9 @@ def learning(MAX_WEIGHT: int,
         print()
 
 
-def main():
-
-    current_folder = os.path.dirname(os.path.abspath(__file__))
-    current_dictionary_file_path = os.path.join(current_folder, CURRENT_DICTIONARY_FILE)
-    
+def main():    
     try:
-        with open(current_dictionary_file_path, 'r') as cur_dict_file:
+        with open(CURRENT_DICTIONARY_FILE_PATH, 'r') as cur_dict_file:
             current_dictionary = cur_dict_file.readline().strip()
     except FileNotFoundError:
         print("Ошибка: не найден файл, хранящий имя текущего словаря.")
@@ -269,7 +310,7 @@ def main():
         print("Ошибка: незвестная ошибка, связанная с открытием файла, хранящего имя текущего словаря.")
         return
     
-    db_path = os.path.join(current_folder, DICTIONARIES_FOLDER, current_dictionary + '.db')
+    db_path = os.path.join(CURRENT_FOLDER, DICTIONARIES_FOLDER, current_dictionary + '.db')
     
     try:
         db = DB(db_path, current_dictionary)
@@ -302,15 +343,20 @@ def main():
 
     parser_del = subparsers.add_parser('del', help=DESCRIPTION_DEL_COMMAND)
     parser_del.add_argument('id_or_word_en')
-    
+
+    parser_dict = subparsers.add_parser('dict', help=DESCRIPTION_DICT_COMMAND)
+    parser_dict.add_argument('dictionary_name', type=str)
+
     args = parser.parse_args()
 
     if args.command == 'add':
         add_command(args, db)
     elif args.command == 'count':
-        count_command(copy_db, MAX_RATING, RATING_TO_WEIGHT)
+        count_command(copy_db, MAX_RATING, RATING_TO_WEIGHT, current_dictionary)
     elif args.command == 'del':
         del_command(args, db)
+    elif args.command == 'dict':
+        dict_command(args, db, current_dictionary)
     else:
         learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db,
             args.rating_from, args.rating_to, args.tw, args.once)
