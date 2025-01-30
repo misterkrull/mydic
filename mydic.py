@@ -27,6 +27,8 @@ DESCRIPTION_HEAD = """\
 DESCRIPTION_ADD_COMMAND = ("Добавить новое слово в словарь\n"
                            "    Формат: mydic add английское_слово русское_слово стартовый_рейтинг")
 
+DESCRIPTION_COUNT_COMMAND = ("Узнать текущее количество слов в словаре")
+
 DESCRIPTION_DEL_COMMAND = ("Удалить слово из словаря (по id в базе данных или по английскому слову)\n"
                            "    Формат: mydic del (id | английское_слово)")
 
@@ -39,6 +41,37 @@ def add_command(args: argparse.Namespace, db: DB) -> None:
         print(f'Словарная пара "{word_en}" - "{word_ru}" со стартовым рейтингом {rating} успешно добавлена!')
     else:
         print(f"Некорректные данные: рейтинг должен быть от 0 до {MAX_RATING}")
+
+
+def count_command(copy_db: list[Any], MAX_RATING: int, RATING_TO_WEIGHT: dict) -> None:
+    rating_counts = [0] * (MAX_RATING + 1)
+    try:
+        for el in copy_db:
+            rating_counts[el[3]] += 1
+    except:
+        print("Невозможно подсчитать количество слов по каждому рейтингу"
+              "Судя по всему, в базе данных некорректные значения рейтинга")
+    print("Количество слов в базе:", len(copy_db))
+    
+    total_weight = sum(rating_counts[i] * RATING_TO_WEIGHT[i] for i in range(MAX_RATING + 1))
+    print("Суммарный вес всех слов:", total_weight)
+    print()
+    print(" Рейтинг    Вес одного     Количество      Шанс выпадения     Шанс выпадения слова")
+    print("               слова          слов          одного слова       с данным рейтингом")
+    
+    digits_rating = len(str(MAX_RATING))
+    digits_rating_to_weight = len(str(max(RATING_TO_WEIGHT.values())))
+    digits_rating_counts = len(str(max(rating_counts)))
+    for i in range(MAX_RATING + 1):
+        print(' ' * max(4 - digits_rating // 2, 0) + f"{i:{digits_rating}d}" + \
+                ' ' * max(6 - (digits_rating - 1) // 2, 0), end='')
+        print(' ' * max(6 - digits_rating_to_weight // 2, 0) + f"{RATING_TO_WEIGHT[i]:{digits_rating_to_weight}d}" + \
+                ' ' * max(8 - (digits_rating_to_weight - 1) // 2, 0), end='')
+        print(' ' * max(6 - digits_rating_counts // 2, 0) + f"{rating_counts[i]:{digits_rating_counts}d}" + \
+                ' ' * max(8 - (digits_rating_counts - 1) // 2, 0), end='')
+        print(f"{(RATING_TO_WEIGHT[i] / total_weight * 100):13.8f} %", end='')
+        print(f"{(RATING_TO_WEIGHT[i] / total_weight * 100 * rating_counts[i]):20.8f} %")
+        
 
 
 # если пользователь введёт: mydic del чтототам
@@ -68,7 +101,14 @@ def del_command(args: argparse.Namespace, db: DB) -> None:
 
 
 # основной алгоритм программы
-def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict, copy_db: list[Any]) -> int:
+def choice_algorhytm(max_rand: int,
+                     number_of_words: int,
+                     RATING_TO_WEIGHT: dict,
+                     copy_db: list[Any],
+                     rating_from: int,
+                     rating_to: int,
+                     single_pass_flags: list[bool]
+                    ) -> int:
     # алгоритм выбора случайного слова с соответствующим рейтингу весом (плотностью вероятности)
     # алгоритм весьма забавный, постараюсь сейчас объяснить его работу
     # 
@@ -107,7 +147,11 @@ def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict
         if RATING_TO_WEIGHT[copy_db[index][3]] > random_number // number_of_words:	
             # если условие выполняется, то значит в текущей ячейке стоит x
             # а это значит - мы победили и нашли слово
-            return index
+            # остаётся проверить, что рейтинг найденного слова попадает в заданные границы,
+            # а также что слово непройдено (для режима '--once')
+            #   (да, не самый оптимальный алгоритм, но пока так)
+            if (rating_from <= copy_db[index][3] <= rating_to) and not single_pass_flags[index]:
+                return index
             # (в частности, если рейтинг слова ноль, то всегда будет перезапуск
             #  а если рейтинг равен MAX_RATING, то всегда будет "мы победили"
             #  что и требуется)
@@ -115,23 +159,72 @@ def choice_algorhytm(max_rand: int, number_of_words: int, RATING_TO_WEIGHT: dict
 
 
 # если пользователь введёт просто mydic (основной режим программы)
-def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, db: DB, copy_db: list[Any]) -> None:
+def learning(MAX_WEIGHT: int, 
+             number_of_words: int, 
+             RATING_TO_WEIGHT: int,
+             db: DB,
+             copy_db: list[Any],
+             rating_from: int,
+             rating_to: int,
+             tw: bool,
+             once: bool
+            ) -> None:
+            
     if number_of_words == 0:
         print("Ваш словарь пуст!\n"
               "Попробуйте заполнить его несколькими словами с помощью команды:\n"
               "    mydic add английское_слово русское_слово стартовый_рейтинг")
         return
+        
+    if not (0 <= rating_from <= MAX_RATING):
+        print(f"Ошибка: значение минимального рейтинга должно быть в диапазоне от 0 до {MAX_RATING}")
+        return
+    if not (0 <= rating_to <= MAX_RATING):
+        print(f"Ошибка: значение максимального рейтинга должно быть в диапазоне от 0 до {MAX_RATING}")
+        return
+    if not rating_from <= rating_to:
+        print("Ошибка: значение минимального рейтинга не должно превышать максимальное")
+        return    
+    
+    amount_of_words = 0
+    for el in copy_db:
+        if rating_from <= el[3] <= rating_to:
+            amount_of_words += 1
+    if amount_of_words > 0:
+        print(f"Вы запустили режим тренировки{' в однократном режиме' if once else ''}!")
+        print("Количество слов в текущей тренировке:", amount_of_words)
+        print()
+    else:
+        print("Нет ни одного слова в указанном диапазоне рейтинга!")
+        return
     
     max_rand = number_of_words * MAX_WEIGHT
-    while True:
-        index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db)
-        print("Английский       : " + str(copy_db[index][1]), end=" ")
-
+    single_pass_flags = [False] * len(copy_db)  # нужен для режима однократного прохождения
+    count = 0  # счётчик повторов, выведем в конце
+    while amount_of_words:  # если не включен однократный режим (и в нашей выборке есть слова)
+                            # то amount_of_words не будет меняться и тут по факту бесконечный цикл
+        index = choice_algorhytm(max_rand, number_of_words, RATING_TO_WEIGHT, copy_db,
+                                 rating_from, rating_to, single_pass_flags)
+        if once:
+            single_pass_flags[index] = True
+            amount_of_words -= 1
+        eng_to_rus = bool(random.randrange(2)) if tw else True            
+        
+        if eng_to_rus:
+            print("Английский       : " + str(copy_db[index][1]), end=" ")
+        else:
+            print("Русский          : " + str(copy_db[index][2]), end=" ")
+        
         quit_symbol = input()
         if quit_symbol in {'q', 'й'}:
+            print("Количество повторённых слов:", count)
             break
+        count += 1
 
-        print("Русский          : " + str(copy_db[index][2]))
+        if eng_to_rus:
+            print("Русский          : " + str(copy_db[index][2]))  
+        else:
+            print("Английский       : " + str(copy_db[index][1]))
         print("Текущий рейтинг  : " + str(copy_db[index][3]))
 
         while True:
@@ -147,7 +240,9 @@ def learning(MAX_WEIGHT: int, number_of_words: int, RATING_TO_WEIGHT: int, db: D
                 print(f"Рейтинг должен быть числом от 0 до {MAX_RATING}! Попробуйте снова!")
             except ValueError:
                 print("Рейтинг должен быть числом, а вы ввели не число! Попробуйте снова!")
-
+        
+        if once and amount_of_words % 5 == 0:  # в однократном режиме каждые 5 слов пишем количество оставшихся
+            print("Осталось слов: ", amount_of_words)
         print()
 
 
@@ -164,14 +259,20 @@ def main():
         description=DESCRIPTION_HEAD.format(max_rating=MAX_RATING),
         formatter_class=argparse.RawTextHelpFormatter  # без этого поля будут игнорироваться символы \n
     )
-    
+    parser.add_argument('--from', '-f', type=int, dest='rating_from', default=0, help='Минимальный рейтинг')
+    parser.add_argument('--once', '-o', action='store_true', help='Режим однократного прохождения')
+    parser.add_argument('--to', '-t', type=int, dest='rating_to', default=MAX_RATING, help='Максимальный рейтинг')
+    parser.add_argument('-tw', '--tw', '--two-way', action='store_true', help='Тренировка перевода в обе стороны')
+        
     subparsers = parser.add_subparsers(dest='command')
 
     parser_add = subparsers.add_parser('add', help=DESCRIPTION_ADD_COMMAND)
     parser_add.add_argument('word_en', type=str)
     parser_add.add_argument('word_ru', type=str)
     parser_add.add_argument('rating', type=int)
-    
+
+    parser_count = subparsers.add_parser('count', help=DESCRIPTION_COUNT_COMMAND)
+
     parser_del = subparsers.add_parser('del', help=DESCRIPTION_DEL_COMMAND)
     parser_del.add_argument('id_or_word_en')
     
@@ -179,10 +280,13 @@ def main():
 
     if args.command == 'add':
         add_command(args, db)
+    elif args.command == 'count':
+        count_command(copy_db, MAX_RATING, RATING_TO_WEIGHT)
     elif args.command == 'del':
         del_command(args, db)
     else:
-        learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db)
+        learning(MAX_WEIGHT, number_of_words, RATING_TO_WEIGHT, db, copy_db,
+            args.rating_from, args.rating_to, args.tw, args.once)
 
 
 if __name__ == "__main__":
