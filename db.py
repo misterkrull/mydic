@@ -2,20 +2,35 @@ import os
 import sqlite3
 from typing import Any
 
-MY_PATH = os.path.dirname(os.path.abspath(__file__))
-
 # важная системная переменная всей программы: максимально возможный рейтинг
 # объявляется в этом файле, т.к. здесь в методе __init__() она нужна
 MAX_RATING = 9
 
-# создаём класс для работы с базой данных
 class DB:
-    # конструктор класса
-    def __init__(self):
+    def __init__(self, db_path: str, current_dictionary: str):
         # соединяемся с файлом базы данных
-        self.conn = sqlite3.connect(os.path.join(MY_PATH, "mydic.db"))
-        # создаём курсор для виртуального управления базой данных
-        self.cur = self.conn.cursor()
+        
+        if not os.path.exists(db_path):
+            print(
+                f"Ошибка: файл словаря '{current_dictionary}' не найден.\n"
+                f"Файл словаря искался по адресу: {db_path}"
+            )
+            self.is_connected = False
+            raise Exception
+        try:
+            self.conn = sqlite3.connect(db_path)
+            self.cur = self.conn.cursor()
+            self.cur.execute("PRAGMA schema_version;")  # проверяем корректность БД
+        except sqlite3.Error as e:
+            print(
+                f"Ошибка при открытии базы данных словаря: {e}\n"
+                f"Имя словаря: {current_dictionary}\n"
+                f"Адрес файла базы данных словаря: {db_path}"
+            )
+            self.is_connected = False
+            raise Exception
+        
+        self.is_connected = True
         # если нужной нам таблицы в базе нет — создаём её
         self.cur.execute(
             "CREATE TABLE IF NOT EXISTS words "
@@ -35,10 +50,9 @@ class DB:
         # сохраняем сделанные изменения в базе
         self.conn.commit()
 
-    # деструктор класса
     def __del__(self):
-        # отключаемся от базы при завершении работы
-        self.conn.close()
+        if self.is_connected:
+            self.conn.close()
    
     # просмотр всех записей  (в таблице words)
     def view(self) -> list[Any]:

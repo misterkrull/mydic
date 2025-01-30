@@ -1,7 +1,12 @@
 import argparse
+import os
 import random
 from db import DB, MAX_RATING
 from typing import Any
+
+
+DICTIONARIES_FOLDER = "dictionaries"
+CURRENT_DICTIONARY_FILE = os.path.join(DICTIONARIES_FOLDER, "_current_dictionary.txt")
 
 
 DESCRIPTION_HEAD = """\
@@ -248,7 +253,29 @@ def learning(MAX_WEIGHT: int,
 
 def main():
 
-    db = DB()
+    current_folder = os.path.dirname(os.path.abspath(__file__))
+    current_dictionary_file_path = os.path.join(current_folder, CURRENT_DICTIONARY_FILE)
+    
+    try:
+        with open(current_dictionary_file_path, 'r') as cur_dict_file:
+            current_dictionary = cur_dict_file.readline().strip()
+    except FileNotFoundError:
+        print("Ошибка: не найден файл, хранящий имя текущего словаря.")
+        return
+    except OSError:
+        print("Ошибка: общая ошибка ввода-вывода при открытии файла, хранящего имя текущего словаря.")
+        return
+    except:
+        print("Ошибка: незвестная ошибка, связанная с открытием файла, хранящего имя текущего словаря.")
+        return
+    
+    db_path = os.path.join(current_folder, DICTIONARIES_FOLDER, current_dictionary + '.db')
+    
+    try:
+        db = DB(db_path, current_dictionary)
+    except Exception:
+        return
+    
     number_of_words = db.count()
     copy_db = db.view()
 

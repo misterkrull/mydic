@@ -1,4 +1,6 @@
-﻿/__pycache__/
-Заметки mydic.txt
-mydic.db
+﻿**/__pycache__/
+
 /.idea/
+/dictionaries/
+
+/Заметки mydic.txt
