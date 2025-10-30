@@ -327,9 +327,9 @@ def main():
         description=DESCRIPTION_HEAD.format(max_rating=MAX_RATING),
         formatter_class=argparse.RawTextHelpFormatter  # без этого поля будут игнорироваться символы \n
     )
-    parser.add_argument('--from', '-f', type=int, dest='rating_from', default=0, help='Минимальный рейтинг')
+    parser.add_argument('--from', '-f', type=int, dest='rating_from', default=0, help='Выбирать из слов с рейтингом не ниже RATING_FROM')
     parser.add_argument('--once', '-o', action='store_true', help='Режим однократного прохождения')
-    parser.add_argument('--to', '-t', type=int, dest='rating_to', default=MAX_RATING, help='Максимальный рейтинг')
+    parser.add_argument('--to', '-t', type=int, dest='rating_to', default=MAX_RATING, help='Выбирать из слов с рейтингом не выше RATING_TO')
     parser.add_argument('-tw', '--tw', '--two-way', action='store_true', help='Тренировка перевода в обе стороны')
         
     subparsers = parser.add_subparsers(dest='command')
